@@ -2,12 +2,10 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <!-- ФІКС ПОЛОСИ ЗВЕРХУ: viewport-fit=cover розтягує сайт на весь екран включно зі статус-баром -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050505">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#050505">
-    
     <title>Pokémon Tracker: Eeveelution Edition</title>
     <style>
         :root {
@@ -18,30 +16,32 @@
             --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-family); }
-
+        /* ПРИБИРАЄМО ПОЛОСИ ПРОКРУТКИ */
         ::-webkit-scrollbar { display: none; }
-        * { -ms-overflow-style: none; scrollbar-width: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-family); }
 
+        /* ФОН НА HTML (ЩОБ ЗАЛИТИ SAFE AREA НА IOS) */
         html, body {
             background-color: var(--bg-dark);
-            color: #ffffff;
             width: 100vw;
-            /* ФІКС DYNAMIC VIEWPORT: 100dvh вирішує проблему Safari зі скролом */
-            height: 100dvh;
-            min-height: 100dvh;
-            display: flex; align-items: center; justify-content: center;
+            height: 100vh;
+            height: 100dvh; 
             overflow: hidden; 
+        }
+
+        body {
+            color: #ffffff;
+            display: flex; align-items: center; justify-content: center;
             background-image: 
-                radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+                radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
         }
 
         /* КНОПКА СИНХРОНІЗАЦІЇ */
         .sync-btn {
             position: fixed;
-            top: env(safe-area-inset-top, 30px); /* Враховує чолку на iPhone */
-            right: 20px;
+            top: calc(20px + env(safe-area-inset-top)); 
+            right: calc(20px + env(safe-area-inset-right));
             width: 44px; height: 44px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -51,35 +51,36 @@
             color: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(10px);
             transition: all 0.3s;
-            margin-top: 10px;
         }
         .sync-btn:hover { color: white; background: rgba(255, 255, 255, 0.1); transform: scale(1.1); }
 
-        /* --- ТРЕК З ІГРАМИ --- */
+        /* --- БАЗОВИЙ ДИЗАЙН (ДЕСКТОП/НОУТБУК) --- */
         .track-container {
             display: flex; align-items: center; gap: 30px;
-            padding: 0 60px; min-width: max-content; margin: 0 auto;
-            height: 100dvh;
-            overflow-x: auto;
-            overflow-y: hidden;
+            padding: env(safe-area-inset-top) 0 0; 
+            height: 100%; width: 100vw;
+            overflow-x: auto; overflow-y: hidden;
             scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ТРЮК ДЛЯ ІДЕАЛЬНОГО ЦЕНТРУВАННЯ НА НОУТБУКАХ */
+        .track-container::before, .track-container::after {
+            content: ''; margin: auto;
         }
 
         .vertical-divider {
             width: 1px; height: 140px;
             background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent);
             margin: 0 10px;
-            transition: opacity 0.3s;
         }
 
-        /* --- КАПСУЛИ (LIQUID GLASS) --- */
         .capsule-wrapper {
             display: flex; flex-direction: column; align-items: center; gap: 15px;
             cursor: pointer; 
             transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
         }
 
+        /* ДЕСКТОПНІ ХОВЕРИ */
         @media (min-width: 769px) {
             .capsule-wrapper:hover { transform: scale(1.08) translateY(-10px); }
             .capsule-wrapper:hover .capsule-icon { color: var(--color1); opacity: 0.6; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
@@ -87,6 +88,52 @@
             .capsule-wrapper:hover .capsule-label { color: var(--color1); text-shadow: 0 0 15px var(--color1); }
         }
 
+        /* --- МОБІЛЬНИЙ РЕЖИМ (НЕСКІНЧЕННА КАРУСЕЛЬ) --- */
+        .track-container.mobile-mode {
+            display: block; 
+            position: relative;
+            padding: 0; margin: 0;
+            width: 100vw; height: 100vh; height: 100dvh;
+        }
+
+        .track-container.mobile-mode::before, .track-container.mobile-mode::after { display: none; }
+        .track-container.mobile-mode .vertical-divider { display: none; }
+
+        .track-container.mobile-mode .capsule-wrapper {
+            position: absolute;
+            left: 50%; top: 50%;
+            /* Базовий стан - сховані капсули */
+            transform: translate(-50%, -50%) scale(0.3);
+            opacity: 0; pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
+        }
+
+        /* Позиції каруселі */
+        .track-container.mobile-mode .capsule-wrapper.active {
+            transform: translate(-50%, calc(-50% - 15px)) scale(1.15); 
+            opacity: 1; pointer-events: all; z-index: 10;
+        }
+        .track-container.mobile-mode .capsule-wrapper.prev {
+            transform: translate(calc(-50% - 115px), calc(-50% - 15px)) scale(0.85); 
+            opacity: 0.4; pointer-events: all; z-index: 5;
+        }
+        .track-container.mobile-mode .capsule-wrapper.next {
+            transform: translate(calc(-50% + 115px), calc(-50% - 15px)) scale(0.85); 
+            opacity: 0.4; pointer-events: all; z-index: 5;
+        }
+        .track-container.mobile-mode .capsule-wrapper.prev-hidden {
+            transform: translate(calc(-50% - 220px), calc(-50% - 15px)) scale(0.6); opacity: 0; z-index: 1;
+        }
+        .track-container.mobile-mode .capsule-wrapper.next-hidden {
+            transform: translate(calc(-50% + 220px), calc(-50% - 15px)) scale(0.6); opacity: 0; z-index: 1;
+        }
+
+        /* Ефекти для центральної (активної) капсули */
+        .track-container.mobile-mode .capsule-wrapper.active .capsule-icon { color: var(--color1); opacity: 0.8; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
+        .track-container.mobile-mode .capsule-wrapper.active .capsule-percent { opacity: 1; }
+        .track-container.mobile-mode .capsule-wrapper.active .capsule-label { color: var(--color1); text-shadow: 0 0 15px var(--color1); }
+
+        /* --- ВІЗУАЛ КАПСУЛИ ТА РІДИНИ --- */
         .capsule {
             width: 80px; height: 260px; border-radius: 40px; 
             background: var(--glass-bg); border: 1px solid var(--glass-border);
@@ -143,37 +190,9 @@
 
         .capsule-label { font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.4); letter-spacing: 2px; text-transform: uppercase; transition: all 0.3s; }
 
-        /* --- МОБІЛЬНИЙ КАРУСЕЛЬНИЙ ДИЗАЙН (COVER FLOW) --- */
-        @media (max-width: 768px) {
-            .track-container {
-                width: 100vw;
-                padding: 0 calc(50vw - 40px); /* 80px capsule / 2 = 40px */
-                scroll-snap-type: x mandatory;
-                align-items: center;
-                gap: 25px;
-            }
-            .vertical-divider { display: none; }
-            
-            .capsule-wrapper {
-                scroll-snap-align: center;
-                opacity: 0.25; /* Робимо неактивні трохи світлішими ніж минулого разу */
-                transform: scale(0.85); 
-                transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
-            }
-            
-            .capsule-wrapper.focused {
-                opacity: 1;
-                transform: scale(1.15); /* Більший акцент на центральній */
-            }
-            
-            .capsule-wrapper.focused .capsule-icon { color: var(--color1); opacity: 0.8; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
-            .capsule-wrapper.focused .capsule-percent { opacity: 1; }
-            .capsule-wrapper.focused .capsule-label { color: var(--color1); text-shadow: 0 0 15px var(--color1); }
-        }
-
-        /* --- МОДАЛЬНЕ ВІКНО --- */
+        /* --- МОДАЛЬНІ ВІКНА --- */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh;
             background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             display: flex; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none; transition: opacity 0.4s ease; z-index: 100;
@@ -183,23 +202,22 @@
         .modal-glass {
             width: 90%; max-width: 500px; max-height: 85dvh;
             background: rgba(15, 15, 15, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 36px;
-            padding: 30px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 30px 60px rgba(0,0,0,0.9);
+            padding: 40px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 30px 60px rgba(0,0,0,0.9);
             transform: scale(0.95) translateY(20px); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             overflow-y: auto; position: relative;
         }
         .modal-overlay.active .modal-glass { transform: scale(1) translateY(0); }
         
         .btn-close {
-            position: absolute; top: 20px; right: 20px;
+            position: absolute; top: 25px; right: 25px;
             background: rgba(255, 255, 255, 0.05); border: none; color: white;
             width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
             font-size: 16px; transition: background 0.2s;
             display: flex; align-items: center; justify-content: center;
-            z-index: 10;
         }
         .btn-close:hover { background: rgba(255, 255, 255, 0.15); }
 
-        .modal-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 25px; margin-top: 10px; color: var(--current-color); text-shadow: 0 0 25px var(--current-color); text-align: center; }
+        .modal-title { font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 30px; color: var(--current-color); text-shadow: 0 0 25px var(--current-color); text-align: center; }
 
         /* ГАЙД-МАРШРУТ */
         .roadmap { border-left: 2px solid rgba(255, 255, 255, 0.05); margin-left: 15px; padding-left: 25px; padding-bottom: 10px; display: flex; flex-direction: column; gap: 20px; }
@@ -227,14 +245,14 @@
         .sync-box { text-align: center; }
         .sync-box p { color: rgba(255,255,255,0.6); margin-bottom: 20px; font-size: 0.95rem; }
         .sync-textarea { width: 100%; height: 80px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 15px; outline: none; resize: none; word-break: break-all; }
-        .sync-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .sync-btn-action { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; flex: 1; transition: 0.2s; min-width: 140px; }
+        .sync-actions { display: flex; gap: 10px; justify-content: center; }
+        .sync-btn-action { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; flex: 1; transition: 0.2s; }
         .sync-btn-action:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
 
-    <!-- Кнопка Синхронізації (Хмарка) -->
+    <!-- Кнопка Синхронізації -->
     <div class="sync-btn" onclick="openSyncModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
             <path d="M17.5 19C19.9853 19 22 16.9853 22 14.5C22 12.1325 20.176 10.1988 17.8687 10.0275C17.4116 6.6433 14.5029 4 11 4C7.13401 4 4 7.13401 4 11C4 11.2338 4.0114 11.465 4.03362 11.6923C2.29654 12.3394 1 14.0198 1 16C1 18.2091 2.79086 20 5 20H17.5Z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -302,7 +320,10 @@
             if (!progressData[game.id]) progressData[game.id] = { steps: new Array(game.steps.length).fill(false), dex: 0 };
         });
 
+        const track = document.getElementById('track-container');
         let activeId = null;
+        let currentCarouselIndex = 0;
+        const N = gamesData.length;
 
         function calcPercent(gameId) {
             const g = gamesData.find(x => x.id === gameId);
@@ -314,15 +335,14 @@
         }
 
         function renderTrack() {
-            const container = document.getElementById('track-container');
-            container.innerHTML = '';
-            
+            track.innerHTML = '';
             gamesData.forEach((game, index) => {
-                if (index === 9) container.innerHTML += `<div class="vertical-divider"></div>`;
+                // Додаємо лінію для десктопа перед Легендами
+                if (index === 9) track.innerHTML += `<div class="vertical-divider"></div>`;
 
                 const pct = calcPercent(game.id);
-                container.innerHTML += `
-                    <div class="capsule-wrapper" id="capsule-${game.id}" onclick="openModal('${game.id}')" style="--color1: ${game.color1};">
+                track.innerHTML += `
+                    <div class="capsule-wrapper" id="capsule-${index}" onclick="handleCapsuleClick('${game.id}', ${index})" style="--color1: ${game.color1};">
                         <div class="capsule">
                             <div class="glass-reflection"></div>
                             <div class="capsule-icon">${game.icon}</div>
@@ -339,59 +359,88 @@
                     </div>
                 `;
             });
-            
-            // Відновлюємо налаштування спостерігача для мобільних
-            setTimeout(() => setupMobileObserver(), 50);
+            updateLayoutMode();
         }
 
-        // --- ІДЕАЛЬНА ЛОГІКА ДЛЯ КАРУСЕЛІ (COVER FLOW) ---
-        let observer = null;
-        function setupMobileObserver() {
-            if (window.innerWidth > 768) return;
-            
-            const track = document.getElementById('track-container');
-            if (observer) observer.disconnect();
-
-            // IntersectionObserver ідеально ловить елемент, що знаходиться по центру
-            observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        // Знімаємо фокус з усіх
-                        document.querySelectorAll('.capsule-wrapper').forEach(w => w.classList.remove('focused'));
-                        // Додаємо фокус центральному
-                        entry.target.classList.add('focused');
-                    }
-                });
-            }, {
-                root: track,
-                rootMargin: '0px -48% 0px -48%', // Спрацьовує коли елемент потрапляє в центральні 4% екрану
-                threshold: 0
-            });
-
-            document.querySelectorAll('.capsule-wrapper').forEach(wrapper => {
-                observer.observe(wrapper);
-            });
-            
-            // Якщо нічого не вибрано, фокусуємо перше
-            if(!document.querySelector('.capsule-wrapper.focused')) {
-                const first = document.querySelector('.capsule-wrapper');
-                if(first) first.classList.add('focused');
+        function updateLayoutMode() {
+            if (window.innerWidth <= 768) {
+                track.classList.add('mobile-mode');
+                updateMobileClasses();
+            } else {
+                track.classList.remove('mobile-mode');
+                document.querySelectorAll('.capsule-wrapper').forEach(w => w.className = 'capsule-wrapper');
             }
         }
 
-        window.addEventListener('resize', setupMobileObserver);
+        // --- ЛОГІКА НЕСКІНЧЕННОЇ КАРУСЕЛІ ---
+        function updateMobileClasses() {
+            if (window.innerWidth > 768) return;
+            
+            const wrappers = document.querySelectorAll('.capsule-wrapper');
+            
+            // Ідеальна математика для нескінченного кола по індексам (0-10)
+            const activeIdx = ((currentCarouselIndex % N) + N) % N;
+            const prevIdx = (((currentCarouselIndex - 1) % N) + N) % N;
+            const nextIdx = (((currentCarouselIndex + 1) % N) + N) % N;
+            const prevHiddenIdx = (((currentCarouselIndex - 2) % N) + N) % N;
+            const nextHiddenIdx = (((currentCarouselIndex + 2) % N) + N) % N;
+
+            wrappers.forEach((w, idx) => {
+                w.className = 'capsule-wrapper'; 
+                
+                if (idx === activeIdx) w.classList.add('active');
+                else if (idx === prevIdx) w.classList.add('prev');
+                else if (idx === nextIdx) w.classList.add('next');
+                else if (idx === prevHiddenIdx) w.classList.add('prev-hidden');
+                else if (idx === nextHiddenIdx) w.classList.add('next-hidden');
+            });
+        }
+
+        function handleCapsuleClick(id, index) {
+            if (window.innerWidth <= 768) {
+                const activeIdx = ((currentCarouselIndex % N) + N) % N;
+                if (index === activeIdx) {
+                    openModal(id);
+                } else {
+                    // Якщо клікнули збоку, обчислюємо в яку сторону коротше крутити карусель
+                    let diff = index - activeIdx;
+                    if (diff > N / 2) diff -= N;
+                    if (diff < -N / 2) diff += N;
+                    
+                    currentCarouselIndex += diff;
+                    updateMobileClasses();
+                }
+            } else {
+                openModal(id); // Десктоп клік
+            }
+        }
+
+        // Логіка свайпу пальцем по екрану
+        let touchStartX = 0;
+        track.addEventListener('touchstart', e => {
+            if (document.getElementById('modalOverlay').classList.contains('active')) return;
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        track.addEventListener('touchend', e => {
+            if (window.innerWidth > 768 || document.getElementById('modalOverlay').classList.contains('active')) return;
+            
+            let touchEndX = e.changedTouches[0].screenX;
+            let swipeDist = touchEndX - touchStartX;
+
+            if (swipeDist < -40) {
+                currentCarouselIndex++; // Свайп вліво -> Наступна
+                updateMobileClasses();
+            } else if (swipeDist > 40) {
+                currentCarouselIndex--; // Свайп вправо -> Попередня
+                updateMobileClasses();
+            }
+        });
+
+        window.addEventListener('resize', updateLayoutMode);
 
         // --- МОДАЛКИ ГРИ ---
         function openModal(id) {
-            // На мобільному клік по боковій (неактивній) колбі просто плавно скролить її в центр
-            if (window.innerWidth <= 768) {
-                const el = document.getElementById(`capsule-${id}`);
-                if (!el.classList.contains('focused')) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                    return; // Не відкриваємо вікно, поки воно не стане по центру
-                }
-            }
-
             activeId = id;
             const g = gamesData.find(x => x.id === id);
             const d = progressData[id];
@@ -440,7 +489,7 @@
         function closeModal(force = false) {
             if (force || event.target.id === 'modalOverlay') {
                 document.getElementById('modalOverlay').classList.remove('active');
-                renderTrack();
+                renderTrack(); 
             }
         }
 
@@ -462,7 +511,7 @@
             navigator.clipboard.writeText(code).then(() => {
                 alert("Твій код синхронізації скопійовано! Надішли його собі (наприклад, у Telegram) та встав на іншому пристрої.");
             }).catch(err => {
-                alert("Не вдалося скопіювати автоматично. Скопіюй текст з поля вручну.");
+                alert("Не вдалося скопіювати. Скопіюй текст з поля вручну.");
             });
         }
 
@@ -483,6 +532,7 @@
             }
         }
 
+        // Запуск
         renderTrack();
     </script>
 </body>
