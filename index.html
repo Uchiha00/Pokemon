@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pokémon Tracker: Eeveelution Edition</title>
     <style>
         :root {
@@ -15,37 +15,69 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-family); }
 
+        /* ПРИБИРАЄМО ПОЛОСИ ПРОКРУТКИ СКРІЗЬ */
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+
         body {
             background-color: var(--bg-dark);
             color: #ffffff;
-            min-height: 100vh;
+            height: 100vh;
+            width: 100vw;
             display: flex; align-items: center; justify-content: center;
-            overflow-x: auto; overflow-y: hidden;
+            overflow: hidden; /* Ніяких скролів на body */
             background-image: 
                 radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
                 radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
         }
 
+        /* КНОПКА СИНХРОНІЗАЦІЇ */
+        .sync-btn {
+            position: fixed;
+            top: 30px; right: 30px;
+            width: 44px; height: 44px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 50;
+            color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        .sync-btn:hover { color: white; background: rgba(255, 255, 255, 0.1); transform: scale(1.1); }
+
         /* --- ТРЕК З ІГРАМИ --- */
         .track-container {
             display: flex; align-items: center; gap: 30px;
             padding: 40px 60px; min-width: max-content; margin: 0 auto;
+            height: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
         }
 
         .vertical-divider {
             width: 1px; height: 140px;
             background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.3), transparent);
             margin: 0 10px;
+            transition: opacity 0.3s;
         }
 
         /* --- КАПСУЛИ (LIQUID GLASS) --- */
         .capsule-wrapper {
             display: flex; flex-direction: column; align-items: center; gap: 15px;
-            cursor: pointer; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            cursor: pointer; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s;
         }
-        .capsule-wrapper:hover { transform: scale(1.08) translateY(-10px); }
 
-        /* САМА КАПСУЛА */
+        /* ДЕСКТОПНІ ХОВЕРИ */
+        @media (min-width: 769px) {
+            .capsule-wrapper:hover { transform: scale(1.08) translateY(-10px); }
+            .capsule-wrapper:hover .capsule-icon { color: var(--color1); opacity: 0.6; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
+            .capsule-wrapper:hover .capsule-percent { opacity: 1; }
+            .capsule-wrapper:hover .capsule-label { color: var(--color1); text-shadow: 0 0 15px var(--color1); }
+        }
+
         .capsule {
             width: 80px; 
             height: 260px;
@@ -57,119 +89,83 @@
             box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.03), var(--glass-shadow);
             position: relative; 
             display: flex; flex-direction: column; justify-content: flex-end;
-            transform: translateZ(0); /* Апаратне прискорення для Safari */
+            transform: translateZ(0); 
         }
 
-        /* НОВИЙ ШАР ДЛЯ ВІДБЛИСКУ (ІЗОЛЬОВАНИЙ ВІД ФОНУ І РІДИНИ) */
         .glass-reflection {
-            position: absolute;
-            inset: 0;
-            border-radius: 40px;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 10;
-            /* Жорстке обрізання для iOS/Safari */
-            -webkit-mask-image: -webkit-radial-gradient(white, black);
-            transform: translateZ(0);
+            position: absolute; inset: 0; border-radius: 40px; overflow: hidden; pointer-events: none; z-index: 10;
+            -webkit-mask-image: -webkit-radial-gradient(white, black); transform: translateZ(0);
         }
-
         .glass-reflection::after {
-            content: ''; position: absolute;
-            top: -10%; left: 10%; width: 30%; height: 120%;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.15), transparent);
-            transform: skewX(-15deg);
+            content: ''; position: absolute; top: -10%; left: 10%; width: 30%; height: 120%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.15), transparent); transform: skewX(-15deg);
         }
 
-        /* ІКОНКА */
         .capsule-icon {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 34px; height: 34px;
-            color: rgba(255, 255, 255, 0.15);
-            z-index: 3;
-            pointer-events: none;
-            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-        .capsule-wrapper:hover .capsule-icon {
-            color: var(--color1);
-            opacity: 0.6;
-            transform: translate(-50%, -50%) scale(1.15);
-            filter: drop-shadow(0 0 10px var(--color1));
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 34px; height: 34px; color: rgba(255, 255, 255, 0.15); z-index: 3;
+            pointer-events: none; transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
-        /* ВЕРТИКАЛЬНИЙ ВІДСОТОК */
         .capsule-percent {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) rotate(-90deg);
-            font-size: 24px; font-weight: 800;
-            color: rgba(255, 255, 255, 0.9);
-            letter-spacing: 2px;
-            pointer-events: none; z-index: 5;
-            mix-blend-mode: overlay;
-            text-shadow: 0 0 15px rgba(0,0,0,0.8);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-90deg);
+            font-size: 24px; font-weight: 800; color: rgba(255, 255, 255, 0.9); letter-spacing: 2px;
+            pointer-events: none; z-index: 5; mix-blend-mode: overlay; text-shadow: 0 0 15px rgba(0,0,0,0.8);
+            opacity: 0; transition: opacity 0.3s ease;
         }
 
-        .capsule-wrapper:hover .capsule-percent,
-        .capsule-wrapper:active .capsule-percent {
-            opacity: 1;
-        }
-
-        /* ШАР ДЛЯ ОБРІЗАННЯ РІДИНИ */
         .liquid-wrapper {
-            position: absolute;
-            inset: 0; 
-            border-radius: 40px; 
-            overflow: hidden; 
-            z-index: 1;
-            /* Жорстке обрізання для iOS/Safari */
-            -webkit-mask-image: -webkit-radial-gradient(white, black);
-            transform: translateZ(0);
+            position: absolute; inset: 0; border-radius: 40px; overflow: hidden; z-index: 1;
+            -webkit-mask-image: -webkit-radial-gradient(white, black); transform: translateZ(0);
         }
 
-        /* --- ДВОКОЛІРНА РІДИНА --- */
         .liquid-container {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: var(--fill, 0%);
-            transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-            will-change: height;
+            position: absolute; bottom: 0; left: 0; width: 100%; height: var(--fill, 0%);
+            transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1); will-change: height;
         }
         .liquid-waves {
             position: absolute; top: -15px; left: 0; width: 200%; height: 16px;
-            display: flex; animation: waveFlow 4s infinite linear;
-            will-change: transform;
+            display: flex; animation: waveFlow 4s infinite linear; will-change: transform;
         }
         .liquid-waves svg { width: 50%; height: 100%; flex-shrink: 0; }
-        
         .liquid-waves.front { color: var(--color1); opacity: 0.95; }
-        
-        .liquid-waves.back { 
-            top: -22px; height: 24px; 
-            color: var(--color2); opacity: 0.85; 
-            animation: waveFlow 5.5s infinite linear reverse; 
-        }
-        
+        .liquid-waves.back { top: -22px; height: 24px; color: var(--color2); opacity: 0.85; animation: waveFlow 5.5s infinite linear reverse; }
         .liquid-body {
             position: absolute; top: 0; left: 0; right: 0; bottom: -50px;
             background: linear-gradient(to bottom, var(--color1) 5%, var(--color2) 95%);
-            opacity: 0.85;
-            box-shadow: 0 -5px 30px var(--color1);
+            opacity: 0.85; box-shadow: 0 -5px 30px var(--color1);
         }
-
         @keyframes waveFlow { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-        .capsule-label {
-            font-size: 13px; font-weight: 700;
-            color: rgba(255, 255, 255, 0.4);
-            letter-spacing: 2px; text-transform: uppercase;
-            transition: all 0.3s;
-        }
-        .capsule-wrapper:hover .capsule-label { 
-            color: var(--color1);
-            text-shadow: 0 0 15px var(--color1);
+        .capsule-label { font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.4); letter-spacing: 2px; text-transform: uppercase; transition: all 0.3s; }
+
+        /* --- МОБІЛЬНИЙ КАРУСЕЛЬНИЙ ДИЗАЙН (COVER FLOW) --- */
+        @media (max-width: 768px) {
+            .track-container {
+                width: 100vw;
+                padding: 0 calc(50vw - 40px); /* Щоб перша і остання колби ставали по центру */
+                scroll-snap-type: x mandatory;
+                align-items: center;
+                gap: 20px;
+            }
+            .vertical-divider { display: none; } /* Прибираємо лінію на мобільних */
+            
+            .capsule-wrapper {
+                scroll-snap-align: center;
+                opacity: 0.3;
+                transform: scale(0.85); /* Бокові зменшені */
+            }
+            
+            /* Клас для колби, яка зараз по центру екрану */
+            .capsule-wrapper.focused {
+                opacity: 1;
+                transform: scale(1.1); /* Центральна збільшена */
+            }
+            
+            /* Ефекти для центральної колби (замінює hover) */
+            .capsule-wrapper.focused .capsule-icon { color: var(--color1); opacity: 0.6; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
+            .capsule-wrapper.focused .capsule-percent { opacity: 1; }
+            .capsule-wrapper.focused .capsule-label { color: var(--color1); text-shadow: 0 0 15px var(--color1); }
         }
 
         /* --- МОДАЛЬНЕ ВІКНО --- */
@@ -183,16 +179,13 @@
 
         .modal-glass {
             width: 90%; max-width: 500px; max-height: 85vh;
-            background: rgba(15, 15, 15, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 36px;
+            background: rgba(15, 15, 15, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 36px;
             padding: 40px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 30px 60px rgba(0,0,0,0.9);
             transform: scale(0.95) translateY(20px); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             overflow-y: auto; position: relative;
         }
         .modal-overlay.active .modal-glass { transform: scale(1) translateY(0); }
-        .modal-glass::-webkit-scrollbar { width: 4px; }
-        .modal-glass::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-
+        
         .btn-close {
             position: absolute; top: 25px; right: 25px;
             background: rgba(255, 255, 255, 0.05); border: none; color: white;
@@ -202,95 +195,61 @@
         }
         .btn-close:hover { background: rgba(255, 255, 255, 0.15); }
 
-        .modal-title {
-            font-size: 2rem; font-weight: 800; letter-spacing: -1px;
-            margin-bottom: 30px; color: var(--current-color);
-            text-shadow: 0 0 25px var(--current-color); text-align: center;
-        }
+        .modal-title { font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 30px; color: var(--current-color); text-shadow: 0 0 25px var(--current-color); text-align: center; }
 
-        /* --- ГАЙД-МАРШРУТ (TIMELINE) --- */
-        .roadmap {
-            border-left: 2px solid rgba(255, 255, 255, 0.05);
-            margin-left: 15px; padding-left: 25px; padding-bottom: 10px;
-            display: flex; flex-direction: column; gap: 20px;
-        }
-
-        .roadmap-item {
-            position: relative; cursor: pointer;
-            display: flex; align-items: center;
-        }
-
+        /* ГАЙД-МАРШРУТ */
+        .roadmap { border-left: 2px solid rgba(255, 255, 255, 0.05); margin-left: 15px; padding-left: 25px; padding-bottom: 10px; display: flex; flex-direction: column; gap: 20px; }
+        .roadmap-item { position: relative; cursor: pointer; display: flex; align-items: center; }
         .roadmap-item::before {
-            content: ''; position: absolute;
-            left: -33px; top: 50%; transform: translateY(-50%);
-            width: 14px; height: 14px; border-radius: 50%;
-            background: var(--bg-dark); border: 2px solid rgba(255,255,255,0.2);
-            transition: all 0.3s; z-index: 2;
+            content: ''; position: absolute; left: -33px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; border-radius: 50%;
+            background: var(--bg-dark); border: 2px solid rgba(255,255,255,0.2); transition: all 0.3s; z-index: 2;
         }
-
-        .roadmap-item.completed::before {
-            background: var(--current-color);
-            border-color: var(--current-color);
-            box-shadow: 0 0 15px var(--current-color);
-        }
-
-        .step-text {
-            font-size: 1.05rem; color: rgba(255, 255, 255, 0.85);
-            transition: all 0.3s; line-height: 1.4;
-        }
-
-        .roadmap-item.completed .step-text {
-            color: rgba(255, 255, 255, 0.25); text-decoration: line-through;
-        }
+        .roadmap-item.completed::before { background: var(--current-color); border-color: var(--current-color); box-shadow: 0 0 15px var(--current-color); }
+        .step-text { font-size: 1.05rem; color: rgba(255, 255, 255, 0.85); transition: all 0.3s; line-height: 1.4; }
+        .roadmap-item.completed .step-text { color: rgba(255, 255, 255, 0.25); text-decoration: line-through; }
 
         /* Покедекс секція */
-        .pokedex-box {
-            background: rgba(0, 0, 0, 0.5); border-radius: 20px;
-            padding: 25px; border: 1px solid rgba(255, 255, 255, 0.03); margin-top: 30px;
-        }
+        .pokedex-box { background: rgba(0, 0, 0, 0.5); border-radius: 20px; padding: 25px; border: 1px solid rgba(255, 255, 255, 0.03); margin-top: 30px; }
         .pokedex-box h3 { text-align: center; margin-bottom: 15px; font-size: 1.1rem; color: rgba(255,255,255,0.6); }
         .slider-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .slider-val { font-weight: bold; color: var(--current-color); }
-        
-        input[type="range"] {
-            -webkit-appearance: none; width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px; outline: none;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
-            background: #fff; border: 2px solid var(--current-color); cursor: pointer;
-            box-shadow: 0 0 15px var(--current-color); transition: transform 0.2s;
-        }
-        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
-        
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid var(--current-color); cursor: pointer; box-shadow: 0 0 15px var(--current-color); transition: transform 0.2s; }
         .dex-inputs { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
-        .dex-inputs input {
-            background: transparent; border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white; font-size: 1.2rem; padding: 8px; width: 80px; text-align: center; border-radius: 8px;
-        }
+        .dex-inputs input { background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); color: white; font-size: 1.2rem; padding: 8px; width: 80px; text-align: center; border-radius: 8px; }
         .dex-inputs input:focus { outline: none; border-color: var(--current-color); }
+
+        /* SYNC MODAL */
+        .sync-box { text-align: center; }
+        .sync-box p { color: rgba(255,255,255,0.6); margin-bottom: 20px; font-size: 0.95rem; }
+        .sync-textarea { width: 100%; height: 80px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 15px; outline: none; resize: none; word-break: break-all; }
+        .sync-actions { display: flex; gap: 10px; justify-content: center; }
+        .sync-btn-action { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; flex: 1; transition: 0.2s; }
+        .sync-btn-action:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
 <body>
+
+    <!-- Кнопка Синхронізації (Хмарка) -->
+    <div class="sync-btn" onclick="openSyncModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M17.5 19C19.9853 19 22 16.9853 22 14.5C22 12.1325 20.176 10.1988 17.8687 10.0275C17.4116 6.6433 14.5029 4 11 4C7.13401 4 4 7.13401 4 11C4 11.2338 4.0114 11.465 4.03362 11.6923C2.29654 12.3394 1 14.0198 1 16C1 18.2091 2.79086 20 5 20H17.5Z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </div>
 
     <div class="track-container" id="track-container">
         <!-- Капсули генеруються через JS -->
     </div>
 
-    <!-- Модальне вікно -->
+    <!-- Модальне вікно Гри -->
     <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
         <div class="modal-glass" id="modalGlass" onclick="event.stopPropagation()">
             <button class="btn-close" onclick="closeModal(true)">✕</button>
             <div class="modal-title" id="modalTitle">Game Title</div>
-            
             <div class="roadmap" id="roadmapList"></div>
-
             <div class="pokedex-box">
                 <h3>Заповнення Покедексу</h3>
-                <div class="slider-header">
-                    <span style="color: rgba(255,255,255,0.5)">Зібрано</span>
-                    <span class="slider-val" id="dexDisplay">0 / 150</span>
-                </div>
+                <div class="slider-header"><span style="color: rgba(255,255,255,0.5)">Зібрано</span><span class="slider-val" id="dexDisplay">0 / 150</span></div>
                 <input type="range" id="dexSlider" min="0" value="0" oninput="updateDex(this.value)">
                 <div class="dex-inputs">
                     <input type="number" id="dexInput" min="0" oninput="updateDex(this.value)">
@@ -301,61 +260,37 @@
         </div>
     </div>
 
+    <!-- Модальне вікно Синхронізації -->
+    <div class="modal-overlay" id="syncModalOverlay" onclick="closeSyncModal(event)">
+        <div class="modal-glass" id="syncModalGlass" onclick="event.stopPropagation()">
+            <button class="btn-close" onclick="closeSyncModal(true)">✕</button>
+            <div class="modal-title" style="color: white; text-shadow: 0 0 15px rgba(255,255,255,0.5);">Синхронізація</div>
+            <div class="sync-box">
+                <p>Скопіюй свій код на одному пристрої та встав на іншому, щоб перенести збереження.</p>
+                <textarea id="syncDataInput" class="sync-textarea" placeholder="Встав код сюди..."></textarea>
+                <div class="sync-actions">
+                    <button class="sync-btn-action" onclick="copySyncCode()">Копіювати мій код</button>
+                    <button class="sync-btn-action" style="background: #27AE60; border-color: #27AE60;" onclick="importSyncCode()">Застосувати код</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const waveSvg = `
-            <svg viewBox="0 0 200 20" preserveAspectRatio="none">
-                <path d="M0 10 Q 25 0 50 10 T 100 10 T 150 10 T 200 10 L 200 20 L 0 20 Z" fill="currentColor"></path>
-            </svg>
-            <svg viewBox="0 0 200 20" preserveAspectRatio="none">
-                <path d="M0 10 Q 25 0 50 10 T 100 10 T 150 10 T 200 10 L 200 20 L 0 20 Z" fill="currentColor"></path>
-            </svg>
-        `;
+        const waveSvg = `<svg viewBox="0 0 200 20" preserveAspectRatio="none"><path d="M0 10 Q 25 0 50 10 T 100 10 T 150 10 T 200 10 L 200 20 L 0 20 Z" fill="currentColor"></path></svg><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path d="M0 10 Q 25 0 50 10 T 100 10 T 150 10 T 200 10 L 200 20 L 0 20 Z" fill="currentColor"></path></svg>`;
 
         const gamesData = [
-            { id: 'gen1', label: 'Gen I', title: "Let's Go, Eevee!", color1: '#C5915D', color2: '#F3E5D8', dexMax: 153, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="10" stroke-dasharray="3 3"/></svg>', 
-              steps: ["П'ютер-Сіті (Брок)", "Церулін-Сіті (Місті)", "Верміліон-Сіті (Л. Серж)", "Селадон-Сіті (Еріка)", "Фуксія-Сіті (Кога)", "Сафрон-Сіті (Сабріна)", "Сіннабар (Блейн)", "Вірідіан-Сіті (Джованні)", "Ліга Покемонів та Чемпіон"]
-            },
-            { id: 'gen2', label: 'Gen II', title: "SoulSilver", color1: '#5CA6CB', color2: '#9AD6EB', dexMax: 256, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2.5 c0 0 -7.5 9 -7.5 13.5 a7.5 7.5 0 0 0 15 0 c0 -4.5 -7.5 -13.5 -7.5 -13.5 z"/></svg>',
-              steps: ["Вайолет-Сіті (Фолкнер)", "Азалеа-Таун (Багсі)", "Голденрод (Вітні)", "Екрутік-Сіті (Морті)", "Сіанвуд (Чак)", "Олівін-Сіті (Жасмін)", "Махогані-Таун (Прайс)", "Блекторн (Клер)", "Ліга Джото", "Зібрати 8 Значків Канто", "Гора Сільвер (Битва з Редом)"]
-            },
-            { id: 'gen3', label: 'Gen III', title: "Alpha Sapphire", color1: '#F4D23C', color2: '#FFFFFF', dexMax: 211, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M13 2 L3 14 h7 l-2 8 10 -12 h-7 l2 -8 z"/></svg>',
-              steps: ["Растборо (Роксана)", "Дьюфорд (Броулі)", "Мавіль-Сіті (Ватсон)", "Лаварідж (Фланнері)", "Петалбург (Норман)", "Фортрі (Вінона)", "Мосдіп (Тейт та Лайза)", "Сутополіс (Воллес)", "Перемогти Команду Аква", "Ліга Хоенну", "Епізод Delta (Деоксіс)"]
-            },
-            { id: 'gen4', label: 'Gen IV', title: "Brilliant Diamond", color1: '#F07645', color2: '#FDE48C', dexMax: 150, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c5.5 0 8-4.5 8-9s-4-8-8-11c-4 3-8 6.5-8 11s2.5 9 8 9z"/><path d="M12 22c-2.5 0-4-2-4-4.5s2-4.5 4-6c2 1.5 4 3.5 4 6s-1.5 4.5-4 4.5z"/></svg>',
-              steps: ["Оребург (Рорк)", "Етерна-Сіті (Гарденія)", "Вейлстоун (Мейлін)", "Пасторія (Крейш Вік)", "Хартхоум (Фантіна)", "Каналав (Байрон)", "Сноупойнт (Кендіс)", "Санішор (Волкнер)", "Спис-Стовп (Команда Галактика)", "Ліга Сінно (Синтія)"]
-            },
-            { id: 'gen5', label: 'Gen V', title: "White 1 & 2", color1: '#A884BA', color2: '#5C3877', dexMax: 300, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20 M2 12h20 M4.9 4.9l14.2 14.2 M4.9 19.1L19.1 4.9"/><circle cx="12" cy="12" r="4"/></svg>',
-              steps: ["White: Стріатон, Накрен, Кастелія", "White: Німбаса, Дріфтвейл", "White: Містралтон, Айсірус, Опелусід", "White: Замок N та Гетсіс", "White 2: Аспертія, Вірбанк, Кастелія", "White 2: Німбаса, Дріфтвейл, Містралтон", "White 2: Опелусід, Хумлау", "White 2: Турнір Чемпіонів (Айріс)"]
-            },
-            { id: 'gen6', label: 'Gen VI', title: "Pokémon X", color1: '#FFE031', color2: '#111111', dexMax: 457, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.8 A9 9 0 1 1 11.2 3 a7 7 0 1 0 9.8 9.8 z"/></svg>',
-              steps: ["Санталун (Віола)", "Сіллейдж (Грант)", "Шалур (Корріна)", "Кумарін (Рамос)", "Луміос (Клемонт)", "Лавер (Валері)", "Аністар (Олімпія)", "Сноубел (Вульфрік)", "База Команди Флер", "Ліга Калоса"]
-            },
-            { id: 'gen7', label: 'Gen VII', title: "Ultra Moon", color1: '#8EC26F', color2: '#E5D6A0', dexMax: 403, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2c0 0 8 4 8 10 0 5-5 10-8 10-3 0-8-5-8-10 0-6 8-10 8-10z M12 2v20"/></svg>',
-              steps: ["Острів Мелемеле (Хала)", "Острів Акала (Олівія)", "Острів Ула-Ула (Нану)", "Острів Поні (Хапу)", "Врятувати від Ультра Некрозми", "Ліга Алоли", "Епізод Rainbow Rocket"]
-            },
-            { id: 'gen8', label: 'Gen VIII', title: "Pokémon Shield", color1: '#79C4D7', color2: '#2F7C92', dexMax: 400, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20 M2 12h20 M5 5l14 14 M5 19l14-14 M12 6L9 9h6z M12 18l-3-3h6z M6 12l3-3v6z M18 12l-3-3v6z"/></svg>',
-              steps: ["Турфілд (Майло)", "Халлбері (Несса)", "Мотостоук (Кабу)", "Стоу-он-Сайд (Алістер)", "Баллонлея (Опал)", "Кірчестер (Мелоні)", "Спайкмут (Пірс)", "Хаммерлок (Райхан)", "Турнір (Леон)", "DLC: The Isle of Armor", "DLC: The Crown Tundra"]
-            },
-            { id: 'gen9', label: 'Gen IX', title: "Pokémon Violet", color1: '#F09AB8', color2: '#8ED2EE', dexMax: 400, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21.3 l-1.4 -1.3 c-5 -4.5 -8.3 -7.5 -8.3 -11.2 a4.5 4.5 0 0 1 4.5 -4.5 c2 0 3.8 1 4.7 2.5 c.9 -1.5 2.7 -2.5 4.7 -2.5 a4.5 4.5 0 0 1 4.5 4.5 c0 3.7 -3.3 6.7 -8.3 11.2 z"/></svg>',
-              steps: ["[Lv.14] Гім комах: Кеті", "[Lv.16] Титан скелі: Клавф", "[Lv.16] Трав'яний гім: Брасіус", "[Lv.19] Титан неба: Бомбірдьє", "[Lv.20] Team Star Темні: Джакомо", "[Lv.23] Електричний гім: Іоно", "[Lv.26] Team Star Вогонь: Мела", "[Lv.28] Титан сталі: Ортворм", "[Lv.29] Водяний гім: Кофу", "[Lv.32] Team Star Отрута: Аттікус", "[Lv.35] Нормальний гім: Ларрі", "[Lv.41] Примарний гім: Райм", "[Lv.44] Титан землі: Залізний колісник", "[Lv.44] Психічний гім: Тюліп", "[Lv.47] Льодяний гім: Груша", "[Lv.50] Team Star Феї: Ортега", "[Lv.55] Team Star Бойові: Ері", "[Lv.55] Титан води: Дондозо", "Елітна четвірка та Топ-Чемпіон", "Фінал: Зона Нуль (Area Zero)", "DLC: Teal Mask & Indigo Disk", "Епілог: Mochi Mayhem"]
-            },
-            { id: 'arceus', label: 'Arceus', title: "Legends: Arceus", color1: '#F2C94C', color2: '#FFFFFF', dexMax: 242, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8"/><path d="M12 2v4 M12 18v4 M2 12h4 M18 12h4"/></svg>',
-              steps: ["Обсидіанові поля (Клівор)", "Багряні болота (Лілігант)", "Кобальтові береги (Арканайн)", "Нагір'я Коронет (Електрод)", "Алебастрові льоди (Авалугг)", "Храм Сінно (Діалга/Палкія)", "Перемогти Воло", "Зустріч з Аркеусом"]
-            },
-            { id: 'za', label: 'Z-A', title: "Legends: Z-A", color1: '#27AE60', color2: '#0B2915', dexMax: 200, 
-              icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 6h16L4 18h16"/></svg>',
-              steps: ["Сюжет Люміос-Сіті (Очікується)", "Проекти Відбудови Міста", "Зібрати Мега Камені"]
-            }
+            { id: 'gen1', label: 'Gen I', title: "Let's Go, Eevee!", color1: '#C5915D', color2: '#F3E5D8', dexMax: 153, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="10" stroke-dasharray="3 3"/></svg>', steps: ["П'ютер-Сіті (Брок)", "Церулін-Сіті (Місті)", "Верміліон-Сіті (Л. Серж)", "Селадон-Сіті (Еріка)", "Фуксія-Сіті (Кога)", "Сафрон-Сіті (Сабріна)", "Сіннабар (Блейн)", "Вірідіан-Сіті (Джованні)", "Ліга Покемонів та Чемпіон"] },
+            { id: 'gen2', label: 'Gen II', title: "SoulSilver", color1: '#5CA6CB', color2: '#9AD6EB', dexMax: 256, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2.5 c0 0 -7.5 9 -7.5 13.5 a7.5 7.5 0 0 0 15 0 c0 -4.5 -7.5 -13.5 -7.5 -13.5 z"/></svg>', steps: ["Вайолет-Сіті (Фолкнер)", "Азалеа-Таун (Багсі)", "Голденрод (Вітні)", "Екрутік-Сіті (Морті)", "Сіанвуд (Чак)", "Олівін-Сіті (Жасмін)", "Махогані-Таун (Прайс)", "Блекторн (Клер)", "Ліга Джото", "Зібрати 8 Значків Канто", "Гора Сільвер (Битва з Редом)"] },
+            { id: 'gen3', label: 'Gen III', title: "Alpha Sapphire", color1: '#F4D23C', color2: '#FFFFFF', dexMax: 211, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M13 2 L3 14 h7 l-2 8 10 -12 h-7 l2 -8 z"/></svg>', steps: ["Растборо (Роксана)", "Дьюфорд (Броулі)", "Мавіль-Сіті (Ватсон)", "Лаварідж (Фланнері)", "Петалбург (Норман)", "Фортрі (Вінона)", "Мосдіп (Тейт та Лайза)", "Сутополіс (Воллес)", "Перемогти Команду Аква", "Ліга Хоенну", "Епізод Delta (Деоксіс)"] },
+            { id: 'gen4', label: 'Gen IV', title: "Brilliant Diamond", color1: '#F07645', color2: '#FDE48C', dexMax: 150, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c5.5 0 8-4.5 8-9s-4-8-8-11c-4 3-8 6.5-8 11s2.5 9 8 9z"/><path d="M12 22c-2.5 0-4-2-4-4.5s2-4.5 4-6c2 1.5 4 3.5 4 6s-1.5 4.5-4 4.5z"/></svg>', steps: ["Оребург (Рорк)", "Етерна-Сіті (Гарденія)", "Вейлстоун (Мейлін)", "Пасторія (Крейш Вік)", "Хартхоум (Фантіна)", "Каналав (Байрон)", "Сноупойнт (Кендіс)", "Санішор (Волкнер)", "Спис-Стовп (Команда Галактика)", "Ліга Сінно (Синтія)"] },
+            { id: 'gen5', label: 'Gen V', title: "White 1 & 2", color1: '#A884BA', color2: '#5C3877', dexMax: 300, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20 M2 12h20 M4.9 4.9l14.2 14.2 M4.9 19.1L19.1 4.9"/><circle cx="12" cy="12" r="4"/></svg>', steps: ["White: Стріатон, Накрен, Кастелія", "White: Німбаса, Дріфтвейл", "White: Містралтон, Айсірус, Опелусід", "White: Замок N та Гетсіс", "White 2: Аспертія, Вірбанк, Кастелія", "White 2: Німбаса, Дріфтвейл, Містралтон", "White 2: Опелусід, Хумлау", "White 2: Турнір Чемпіонів (Айріс)"] },
+            { id: 'gen6', label: 'Gen VI', title: "Pokémon X", color1: '#FFE031', color2: '#111111', dexMax: 457, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.8 A9 9 0 1 1 11.2 3 a7 7 0 1 0 9.8 9.8 z"/></svg>', steps: ["Санталун (Віола)", "Сіллейдж (Грант)", "Шалур (Корріна)", "Кумарін (Рамос)", "Луміос (Клемонт)", "Лавер (Валері)", "Аністар (Олімпія)", "Сноубел (Вульфрік)", "База Команди Флер", "Ліга Калоса"] },
+            { id: 'gen7', label: 'Gen VII', title: "Ultra Moon", color1: '#8EC26F', color2: '#E5D6A0', dexMax: 403, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2c0 0 8 4 8 10 0 5-5 10-8 10-3 0-8-5-8-10 0-6 8-10 8-10z M12 2v20"/></svg>', steps: ["Острів Мелемеле (Хала)", "Острів Акала (Олівія)", "Острів Ула-Ула (Нану)", "Острів Поні (Хапу)", "Врятувати від Ультра Некрозми", "Ліга Алоли", "Епізод Rainbow Rocket"] },
+            { id: 'gen8', label: 'Gen VIII', title: "Pokémon Shield", color1: '#79C4D7', color2: '#2F7C92', dexMax: 400, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20 M2 12h20 M5 5l14 14 M5 19l14-14 M12 6L9 9h6z M12 18l-3-3h6z M6 12l3-3v6z M18 12l-3-3v6z"/></svg>', steps: ["Турфілд (Майло)", "Халлбері (Несса)", "Мотостоук (Кабу)", "Стоу-он-Сайд (Алістер)", "Баллонлея (Опал)", "Кірчестер (Мелоні)", "Спайкмут (Пірс)", "Хаммерлок (Райхан)", "Турнір (Леон)", "DLC: The Isle of Armor", "DLC: The Crown Tundra"] },
+            { id: 'gen9', label: 'Gen IX', title: "Pokémon Violet", color1: '#F09AB8', color2: '#8ED2EE', dexMax: 400, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21.3 l-1.4 -1.3 c-5 -4.5 -8.3 -7.5 -8.3 -11.2 a4.5 4.5 0 0 1 4.5 -4.5 c2 0 3.8 1 4.7 2.5 c.9 -1.5 2.7 -2.5 4.7 -2.5 a4.5 4.5 0 0 1 4.5 4.5 c0 3.7 -3.3 6.7 -8.3 11.2 z"/></svg>', steps: ["[Lv.14] Гім комах: Кеті", "[Lv.16] Титан скелі: Клавф", "[Lv.16] Трав'яний гім: Брасіус", "[Lv.19] Титан неба: Бомбірдьє", "[Lv.20] Team Star Темні: Джакомо", "[Lv.23] Електричний гім: Іоно", "[Lv.26] Team Star Вогонь: Мела", "[Lv.28] Титан сталі: Ортворм", "[Lv.29] Водяний гім: Кофу", "[Lv.32] Team Star Отрута: Аттікус", "[Lv.35] Нормальний гім: Ларрі", "[Lv.41] Примарний гім: Райм", "[Lv.44] Титан землі: Залізний колісник", "[Lv.44] Психічний гім: Тюліп", "[Lv.47] Льодяний гім: Груша", "[Lv.50] Team Star Феї: Ортега", "[Lv.55] Team Star Бойові: Ері", "[Lv.55] Титан води: Дондозо", "Елітна четвірка та Топ-Чемпіон", "Фінал: Зона Нуль (Area Zero)", "DLC: Teal Mask & Indigo Disk", "Епілог: Mochi Mayhem"] },
+            { id: 'arceus', label: 'Arceus', title: "Legends: Arceus", color1: '#F2C94C', color2: '#FFFFFF', dexMax: 242, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8"/><path d="M12 2v4 M12 18v4 M2 12h4 M18 12h4"/></svg>', steps: ["Обсидіанові поля (Клівор)", "Багряні болота (Лілігант)", "Кобальтові береги (Арканайн)", "Нагір'я Коронет (Електрод)", "Алебастрові льоди (Авалугг)", "Храм Сінно (Діалга/Палкія)", "Перемогти Воло", "Зустріч з Аркеусом"] },
+            { id: 'za', label: 'Z-A', title: "Legends: Z-A", color1: '#27AE60', color2: '#0B2915', dexMax: 200, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M4 6h16L4 18h16"/></svg>', steps: ["Сюжет Люміос-Сіті (Очікується)", "Проекти Відбудови Міста", "Зібрати Мега Камені"] }
         ];
 
         let progressData = JSON.parse(localStorage.getItem('pokeTrackerEeveeV1')) || {};
@@ -371,8 +306,7 @@
             const completedSteps = d.steps.filter(Boolean).length;
             const stepsPct = g.steps.length === 0 ? 0 : (completedSteps / g.steps.length) * 100;
             const dexPct = (d.dex / g.dexMax) * 100;
-            const overall = Math.min(100, (stepsPct * 0.9) + (dexPct * 0.1));
-            return parseFloat(overall.toFixed(1));
+            return parseFloat(Math.min(100, (stepsPct * 0.9) + (dexPct * 0.1)).toFixed(1));
         }
 
         function renderTrack() {
@@ -383,9 +317,8 @@
                 if (index === 9) container.innerHTML += `<div class="vertical-divider"></div>`;
 
                 const pct = calcPercent(game.id);
-                // ДОДАНО НОВИЙ ШАР .glass-reflection ДЛЯ ОБРІЗАННЯ ВІДБЛИСКУ
                 container.innerHTML += `
-                    <div class="capsule-wrapper" onclick="openModal('${game.id}')" style="--color1: ${game.color1};">
+                    <div class="capsule-wrapper" id="capsule-${game.id}" onclick="openModal('${game.id}')" style="--color1: ${game.color1};">
                         <div class="capsule">
                             <div class="glass-reflection"></div>
                             <div class="capsule-icon">${game.icon}</div>
@@ -402,9 +335,49 @@
                     </div>
                 `;
             });
+            updateMobileFocus();
         }
 
+        // --- ЛОГІКА МОБІЛЬНОЇ КАРУСЕЛІ (COVER FLOW) ---
+        const track = document.getElementById('track-container');
+        function updateMobileFocus() {
+            if (window.innerWidth > 768) {
+                document.querySelectorAll('.capsule-wrapper').forEach(w => w.classList.remove('focused'));
+                return;
+            }
+            
+            const center = track.scrollLeft + (track.clientWidth / 2);
+            let closest = null;
+            let minDiff = Infinity;
+
+            document.querySelectorAll('.capsule-wrapper').forEach(wrapper => {
+                // Рахуємо відносно контейнера
+                const wrapperCenter = wrapper.offsetLeft + (wrapper.offsetWidth / 2);
+                const diff = Math.abs(center - wrapperCenter);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = wrapper;
+                }
+            });
+
+            document.querySelectorAll('.capsule-wrapper').forEach(w => w.classList.remove('focused'));
+            if (closest) closest.classList.add('focused');
+        }
+
+        track.addEventListener('scroll', updateMobileFocus);
+        window.addEventListener('resize', updateMobileFocus);
+
+        // --- МОДАЛКИ ГРИ ---
         function openModal(id) {
+            // На мобільному клік по неактивній колбі просто скролить до неї
+            if (window.innerWidth <= 768) {
+                const el = document.getElementById(`capsule-${id}`);
+                if (!el.classList.contains('focused')) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    return;
+                }
+            }
+
             activeId = id;
             const g = gamesData.find(x => x.id === id);
             const d = progressData[id];
@@ -414,7 +387,6 @@
             
             const list = document.getElementById('roadmapList');
             list.innerHTML = '';
-            
             g.steps.forEach((stepText, i) => {
                 const isCompleted = d.steps[i];
                 const div = document.createElement('div');
@@ -458,7 +430,54 @@
             }
         }
 
+        // --- МОДАЛКА СИНХРОНІЗАЦІЇ ---
+        function openSyncModal() {
+            document.getElementById('syncDataInput').value = '';
+            document.getElementById('syncModalOverlay').classList.add('active');
+        }
+
+        function closeSyncModal(force = false) {
+            if (force || event.target.id === 'syncModalOverlay') {
+                document.getElementById('syncModalOverlay').classList.remove('active');
+            }
+        }
+
+        function copySyncCode() {
+            // Кодуємо дані в base64
+            const code = btoa(JSON.stringify(progressData));
+            document.getElementById('syncDataInput').value = code;
+            navigator.clipboard.writeText(code).then(() => {
+                alert("Твій код синхронізації скопійовано! Надішли його собі (наприклад, у Telegram) та встав на іншому пристрої.");
+            }).catch(err => {
+                alert("Не вдалося скопіювати. Скопіюй текст з поля вручну.");
+            });
+        }
+
+        function importSyncCode() {
+            const code = document.getElementById('syncDataInput').value.trim();
+            if (!code) { alert("Встав код у поле!"); return; }
+            try {
+                const parsed = JSON.parse(atob(code));
+                if (parsed && typeof parsed === 'object') {
+                    progressData = parsed;
+                    localStorage.setItem('pokeTrackerEeveeV1', JSON.stringify(progressData));
+                    renderTrack();
+                    closeSyncModal(true);
+                    alert("Синхронізація успішна! Твій прогрес завантажено.");
+                }
+            } catch (e) {
+                alert("Помилка! Неправильний код синхронізації.");
+            }
+        }
+
         renderTrack();
+        // Даємо час браузеру відрендерити елементи, потім виставляємо фокус для мобілок
+        setTimeout(() => {
+            if(window.innerWidth <= 768) {
+                track.scrollLeft = 0;
+                updateMobileFocus();
+            }
+        }, 100);
     </script>
 </body>
 </html>
