@@ -2,7 +2,12 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- ФІКС ПОЛОСИ ЗВЕРХУ: viewport-fit=cover розтягує сайт на весь екран включно зі статус-баром -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050505">
+    
     <title>Pokémon Tracker: Eeveelution Edition</title>
     <style>
         :root {
@@ -15,26 +20,28 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-family); }
 
-        /* ПРИБИРАЄМО ПОЛОСИ ПРОКРУТКИ СКРІЗЬ */
         ::-webkit-scrollbar { display: none; }
         * { -ms-overflow-style: none; scrollbar-width: none; }
 
-        body {
+        html, body {
             background-color: var(--bg-dark);
             color: #ffffff;
-            height: 100vh;
             width: 100vw;
+            /* ФІКС DYNAMIC VIEWPORT: 100dvh вирішує проблему Safari зі скролом */
+            height: 100dvh;
+            min-height: 100dvh;
             display: flex; align-items: center; justify-content: center;
-            overflow: hidden; /* Ніяких скролів на body */
+            overflow: hidden; 
             background-image: 
-                radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+                radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
         }
 
         /* КНОПКА СИНХРОНІЗАЦІЇ */
         .sync-btn {
             position: fixed;
-            top: 30px; right: 30px;
+            top: env(safe-area-inset-top, 30px); /* Враховує чолку на iPhone */
+            right: 20px;
             width: 44px; height: 44px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -44,17 +51,19 @@
             color: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(10px);
             transition: all 0.3s;
+            margin-top: 10px;
         }
         .sync-btn:hover { color: white; background: rgba(255, 255, 255, 0.1); transform: scale(1.1); }
 
         /* --- ТРЕК З ІГРАМИ --- */
         .track-container {
             display: flex; align-items: center; gap: 30px;
-            padding: 40px 60px; min-width: max-content; margin: 0 auto;
-            height: 100%;
+            padding: 0 60px; min-width: max-content; margin: 0 auto;
+            height: 100dvh;
             overflow-x: auto;
             overflow-y: hidden;
             scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
 
         .vertical-divider {
@@ -67,10 +76,10 @@
         /* --- КАПСУЛИ (LIQUID GLASS) --- */
         .capsule-wrapper {
             display: flex; flex-direction: column; align-items: center; gap: 15px;
-            cursor: pointer; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s;
+            cursor: pointer; 
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
         }
 
-        /* ДЕСКТОПНІ ХОВЕРИ */
         @media (min-width: 769px) {
             .capsule-wrapper:hover { transform: scale(1.08) translateY(-10px); }
             .capsule-wrapper:hover .capsule-icon { color: var(--color1); opacity: 0.6; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
@@ -79,16 +88,11 @@
         }
 
         .capsule {
-            width: 80px; 
-            height: 260px;
-            border-radius: 40px; 
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(25px) saturate(150%);
-            -webkit-backdrop-filter: blur(25px) saturate(150%);
+            width: 80px; height: 260px; border-radius: 40px; 
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            backdrop-filter: blur(25px) saturate(150%); -webkit-backdrop-filter: blur(25px) saturate(150%);
             box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.03), var(--glass-shadow);
-            position: relative; 
-            display: flex; flex-direction: column; justify-content: flex-end;
+            position: relative; display: flex; flex-direction: column; justify-content: flex-end;
             transform: translateZ(0); 
         }
 
@@ -143,34 +147,33 @@
         @media (max-width: 768px) {
             .track-container {
                 width: 100vw;
-                padding: 0 calc(50vw - 40px); /* Щоб перша і остання колби ставали по центру */
+                padding: 0 calc(50vw - 40px); /* 80px capsule / 2 = 40px */
                 scroll-snap-type: x mandatory;
                 align-items: center;
-                gap: 20px;
+                gap: 25px;
             }
-            .vertical-divider { display: none; } /* Прибираємо лінію на мобільних */
+            .vertical-divider { display: none; }
             
             .capsule-wrapper {
                 scroll-snap-align: center;
-                opacity: 0.3;
-                transform: scale(0.85); /* Бокові зменшені */
+                opacity: 0.25; /* Робимо неактивні трохи світлішими ніж минулого разу */
+                transform: scale(0.85); 
+                transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
             }
             
-            /* Клас для колби, яка зараз по центру екрану */
             .capsule-wrapper.focused {
                 opacity: 1;
-                transform: scale(1.1); /* Центральна збільшена */
+                transform: scale(1.15); /* Більший акцент на центральній */
             }
             
-            /* Ефекти для центральної колби (замінює hover) */
-            .capsule-wrapper.focused .capsule-icon { color: var(--color1); opacity: 0.6; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
+            .capsule-wrapper.focused .capsule-icon { color: var(--color1); opacity: 0.8; transform: translate(-50%, -50%) scale(1.15); filter: drop-shadow(0 0 10px var(--color1)); }
             .capsule-wrapper.focused .capsule-percent { opacity: 1; }
             .capsule-wrapper.focused .capsule-label { color: var(--color1); text-shadow: 0 0 15px var(--color1); }
         }
 
         /* --- МОДАЛЬНЕ ВІКНО --- */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
             background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             display: flex; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none; transition: opacity 0.4s ease; z-index: 100;
@@ -178,24 +181,25 @@
         .modal-overlay.active { opacity: 1; pointer-events: all; }
 
         .modal-glass {
-            width: 90%; max-width: 500px; max-height: 85vh;
+            width: 90%; max-width: 500px; max-height: 85dvh;
             background: rgba(15, 15, 15, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 36px;
-            padding: 40px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 30px 60px rgba(0,0,0,0.9);
+            padding: 30px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 30px 60px rgba(0,0,0,0.9);
             transform: scale(0.95) translateY(20px); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             overflow-y: auto; position: relative;
         }
         .modal-overlay.active .modal-glass { transform: scale(1) translateY(0); }
         
         .btn-close {
-            position: absolute; top: 25px; right: 25px;
+            position: absolute; top: 20px; right: 20px;
             background: rgba(255, 255, 255, 0.05); border: none; color: white;
             width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
             font-size: 16px; transition: background 0.2s;
             display: flex; align-items: center; justify-content: center;
+            z-index: 10;
         }
         .btn-close:hover { background: rgba(255, 255, 255, 0.15); }
 
-        .modal-title { font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 30px; color: var(--current-color); text-shadow: 0 0 25px var(--current-color); text-align: center; }
+        .modal-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 25px; margin-top: 10px; color: var(--current-color); text-shadow: 0 0 25px var(--current-color); text-align: center; }
 
         /* ГАЙД-МАРШРУТ */
         .roadmap { border-left: 2px solid rgba(255, 255, 255, 0.05); margin-left: 15px; padding-left: 25px; padding-bottom: 10px; display: flex; flex-direction: column; gap: 20px; }
@@ -223,8 +227,8 @@
         .sync-box { text-align: center; }
         .sync-box p { color: rgba(255,255,255,0.6); margin-bottom: 20px; font-size: 0.95rem; }
         .sync-textarea { width: 100%; height: 80px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 10px; font-size: 0.8rem; margin-bottom: 15px; outline: none; resize: none; word-break: break-all; }
-        .sync-actions { display: flex; gap: 10px; justify-content: center; }
-        .sync-btn-action { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; flex: 1; transition: 0.2s; }
+        .sync-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .sync-btn-action { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; flex: 1; transition: 0.2s; min-width: 140px; }
         .sync-btn-action:hover { background: rgba(255,255,255,0.2); }
     </style>
 </head>
@@ -335,46 +339,56 @@
                     </div>
                 `;
             });
-            updateMobileFocus();
+            
+            // Відновлюємо налаштування спостерігача для мобільних
+            setTimeout(() => setupMobileObserver(), 50);
         }
 
-        // --- ЛОГІКА МОБІЛЬНОЇ КАРУСЕЛІ (COVER FLOW) ---
-        const track = document.getElementById('track-container');
-        function updateMobileFocus() {
-            if (window.innerWidth > 768) {
-                document.querySelectorAll('.capsule-wrapper').forEach(w => w.classList.remove('focused'));
-                return;
-            }
+        // --- ІДЕАЛЬНА ЛОГІКА ДЛЯ КАРУСЕЛІ (COVER FLOW) ---
+        let observer = null;
+        function setupMobileObserver() {
+            if (window.innerWidth > 768) return;
             
-            const center = track.scrollLeft + (track.clientWidth / 2);
-            let closest = null;
-            let minDiff = Infinity;
+            const track = document.getElementById('track-container');
+            if (observer) observer.disconnect();
 
-            document.querySelectorAll('.capsule-wrapper').forEach(wrapper => {
-                // Рахуємо відносно контейнера
-                const wrapperCenter = wrapper.offsetLeft + (wrapper.offsetWidth / 2);
-                const diff = Math.abs(center - wrapperCenter);
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    closest = wrapper;
-                }
+            // IntersectionObserver ідеально ловить елемент, що знаходиться по центру
+            observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Знімаємо фокус з усіх
+                        document.querySelectorAll('.capsule-wrapper').forEach(w => w.classList.remove('focused'));
+                        // Додаємо фокус центральному
+                        entry.target.classList.add('focused');
+                    }
+                });
+            }, {
+                root: track,
+                rootMargin: '0px -48% 0px -48%', // Спрацьовує коли елемент потрапляє в центральні 4% екрану
+                threshold: 0
             });
 
-            document.querySelectorAll('.capsule-wrapper').forEach(w => w.classList.remove('focused'));
-            if (closest) closest.classList.add('focused');
+            document.querySelectorAll('.capsule-wrapper').forEach(wrapper => {
+                observer.observe(wrapper);
+            });
+            
+            // Якщо нічого не вибрано, фокусуємо перше
+            if(!document.querySelector('.capsule-wrapper.focused')) {
+                const first = document.querySelector('.capsule-wrapper');
+                if(first) first.classList.add('focused');
+            }
         }
 
-        track.addEventListener('scroll', updateMobileFocus);
-        window.addEventListener('resize', updateMobileFocus);
+        window.addEventListener('resize', setupMobileObserver);
 
         // --- МОДАЛКИ ГРИ ---
         function openModal(id) {
-            // На мобільному клік по неактивній колбі просто скролить до неї
+            // На мобільному клік по боковій (неактивній) колбі просто плавно скролить її в центр
             if (window.innerWidth <= 768) {
                 const el = document.getElementById(`capsule-${id}`);
                 if (!el.classList.contains('focused')) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                    return;
+                    return; // Не відкриваємо вікно, поки воно не стане по центру
                 }
             }
 
@@ -443,13 +457,12 @@
         }
 
         function copySyncCode() {
-            // Кодуємо дані в base64
             const code = btoa(JSON.stringify(progressData));
             document.getElementById('syncDataInput').value = code;
             navigator.clipboard.writeText(code).then(() => {
                 alert("Твій код синхронізації скопійовано! Надішли його собі (наприклад, у Telegram) та встав на іншому пристрої.");
             }).catch(err => {
-                alert("Не вдалося скопіювати. Скопіюй текст з поля вручну.");
+                alert("Не вдалося скопіювати автоматично. Скопіюй текст з поля вручну.");
             });
         }
 
@@ -471,13 +484,6 @@
         }
 
         renderTrack();
-        // Даємо час браузеру відрендерити елементи, потім виставляємо фокус для мобілок
-        setTimeout(() => {
-            if(window.innerWidth <= 768) {
-                track.scrollLeft = 0;
-                updateMobileFocus();
-            }
-        }, 100);
     </script>
 </body>
 </html>
